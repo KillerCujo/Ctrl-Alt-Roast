@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
   <title>Ctrl-Alt-Roast — FIU Pig Roast Run</title>
-  <meta name="description" content="Run, jump, and collect FIU gold as Ctrl-Alt-Roast the Pig in this mobile-friendly game for the FIU Pig Roast!" />
+  <meta name="description" content="Run, jump, and collect FIU gold as our pig dashes through campus in this mobile-friendly runner!" />
   <link rel="preload" href="game.js" as="script">
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -12,14 +12,13 @@
   <main>
     <header class="topbar">
       <h1><span class="fiu">FIU</span> Pig Roast — <span class="title">Ctrl-Alt-Roast</span></h1>
-      <a class="event-btn" target="_blank" rel="noopener" href="https://www.fiu.edu/lp/pigroast/">Event Site</a>
     </header>
 
     <section class="game-wrap">
-      <canvas id="game" width="360" height="640"></canvas>
+      <canvas id="game" width="360" height="640" aria-label="Ctrl-Alt-Roast Game" role="img"></canvas>
       <div id="controls" class="controls">
-        <button id="jumpBtn">Tap • Jump</button>
-        <button id="pauseBtn">Pause</button>
+        <button id="jumpBtn" aria-label="Jump">Tap • Jump</button>
+        <button id="pauseBtn" aria-label="Pause">Pause</button>
       </div>
       <div id="hud" class="hud">
         <div class="score">Score: <span id="score">0</span></div>
@@ -32,7 +31,7 @@
           <h2>Ctrl-Alt-Roast 🐷</h2>
           <p>Help our pig dash through campus, leap over grills, and collect FIU gold!</p>
           <ul>
-            <li>Tap anywhere (or press Space) to jump</li>
+            <li>Tap anywhere (or press <kbd>Space</kbd>) to jump</li>
             <li>Survive and collect coins to level up</li>
             <li>Avoid grills and cones</li>
           </ul>
@@ -43,11 +42,11 @@
         </div>
       </div>
 
-      <div id="toast" class="toast"></div>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </section>
 
     <footer class="footer">
-      <small>Made for the FIU Pig Roast — Team Ctrl-Alt-Roast 🐾</small>
+      <small>Team Ctrl-Alt-Roast — mobile-friendly runner. Not affiliated with Nintendo.</small>
     </footer>
   </main>
 
