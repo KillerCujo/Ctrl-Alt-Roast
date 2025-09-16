@@ -1,4 +1,4 @@
-/* Ctrl-Alt-Roast — canvas runner V5 (recreated) */
+/* Ctrl-Alt-Roast — V6 (snappier physics) */
 (() => {
   const FIU_BLUE = "#081E3F";
   const FIU_GOLD = "#C5960C";
@@ -40,7 +40,7 @@
 
   const state = {
     running: false, paused: false, lastMs: performance.now(), dtSec: 0, t: 0,
-    speed: 2.2, level: 1, score: 0, coins: 0,
+    speed: 3.0, level: 1, score: 0, coins: 0,
     best: Number(localStorage.getItem("car_best") || 0),
     groundY: () => H() - 64,
     obstacles: [], coinsArr: [], particles: [], powerups: [],
@@ -50,13 +50,13 @@
   };
   bestEl.textContent = state.best;
 
-  const player = { x:48, y:0, w:38, h:30, vy:0, onGround:true, jumpPower:-11.0, gravity:0.6, canDouble:false };
+  const player = { x:48, y:0, w:38, h:30, vy:0, onGround:true, jumpPower:-12.5, gravity:1.0, canDouble:false };
   player.y = state.groundY() - player.h;
 
-  function showToast(msg, t=1200){ toast.textContent = msg; toast.classList.add("show"); setTimeout(()=>toast.classList.remove("show"), t); }
+  function showToast(msg, t=900){ toast.textContent = msg; toast.classList.add("show"); setTimeout(()=>toast.classList.remove("show"), t); }
 
   function reset() {
-    state.t=0; state.speed=2.2; state.level=1; state.score=0; state.coins=0; state.power={type:null,time:0};
+    state.t=0; state.speed=3.0; state.level=1; state.score=0; state.coins=0; state.power={type:null,time:0};
     player.x=48; player.vy=0; player.onGround=true; player.canDouble=false; player.y=state.groundY()-player.h;
     state.obstacles.length=0; state.coinsArr.length=0; state.particles.length=0; state.powerups.length=0;
     state.bg.back.length=0; state.bg.palms.length=0; state.bg.front.length=0;
@@ -132,14 +132,14 @@
     const types=["wings","ghost"]; const type=types[RI(0, types.length-1)];
     state.powerups.push({type, x:W()+offsetX, y:state.groundY()-RI(140,200), r:12, taken:false});
   }
-  function levelUp(){ state.level++; state.speed=Math.min(state.speed+0.35, 7.8); showToast(`Level ${state.level}!`); }
+  function levelUp(){ state.level++; state.speed=Math.min(state.speed+0.4, 8.5); showToast(`Level ${state.level}!`); }
 
   function tryJump(){
     if (!state.running || state.paused) return;
     const wingsActive = state.power.type==="wings" && state.power.time>0;
-    if (wingsActive){ player.vy = Math.min(player.vy, -6.0); player.vy += -2.4; return; }
+    if (wingsActive){ player.vy = Math.min(player.vy, -6.5); player.vy += -2.2; return; }
     if (player.onGround){ player.vy = player.jumpPower; player.onGround = false; player.canDouble = true; }
-    else if (player.canDouble){ player.vy = player.jumpPower * 0.9; player.canDouble = false; }
+    else if (player.canDouble){ player.vy = player.jumpPower * 0.92; player.canDouble = false; }
   }
   canvas.addEventListener("pointerdown", (e)=> { e.preventDefault(); tryJump(); }, {passive:false});
   jumpBtn.addEventListener("click", tryJump);
@@ -152,7 +152,7 @@
     } else if (e.key.toLowerCase()==="p"){ pauseToggle(); }
   });
   document.addEventListener("keyup", (e)=>{ const k=e.code; if (k==="Space"||k==="ArrowUp"){ state.keysDown.delete(k); } });
-  howBtn?.addEventListener("click", ()=> showToast("Double-jump • Ghost=invincible 10s • 10 coins = level up"));
+  howBtn?.addEventListener("click", ()=> showToast("Snappy jumps • Double-jump • 10 coins = level up"));
   playBtn?.addEventListener("click", start);
 
   function loop(nowMs){
@@ -170,9 +170,9 @@
     updateParallax(dtSec);
 
     const wings = state.power.type==="wings" && state.power.time>0;
-    const gravity = wings ? 0.24 : player.gravity;
-    player.vy += gravity * dtSec * 60/60;
-    player.y  += player.vy * dtSec * 60/60;
+    const gravity = wings ? 0.5 : player.gravity;
+    player.vy += gravity * (dtSec*60);
+    player.y  += player.vy * (dtSec*60);
 
     if (player.y<0){ player.y=0; player.vy=Math.max(player.vy,0); }
     const gy=state.groundY()-player.h;
@@ -189,19 +189,15 @@
     if (state.powerups.length < 1 && Math.random()<0.012) schedulePowerup(RI(1000,1700));
 
     const ghostActive = state.power.type==="ghost" && state.power.time>0;
-
-    if (!ghostActive){
-      for (const o of state.obstacles){ if (aabb(player, o)) return gameOver(); }
-    }
+    if (!ghostActive){ for (const o of state.obstacles){ if (aabb(player, o)) return gameOver(); } }
     for (const c of state.coinsArr){ if(!c.taken && circleHit(player,c)){ c.taken=true; state.coins++; state.score+=3; if (state.coins%10===0) levelUp(); } }
     for (const p of state.powerups){ if(!p.taken && circleHit(player,p)){ p.taken=true; activatePower(p.type); } }
 
     state.obstacles = state.obstacles.filter(o=> o.x+o.w>-60);
     state.coinsArr = state.coinsArr.filter(c=> !c.taken && c.x+c.r>-40);
     state.powerups = state.powerups.filter(p=> !p.taken && p.x+p.r>-40);
-    state.particles = state.particles.filter(p=> (p.life-=dtSec*60) > 0);
 
-    if (state.power.type){ state.power.time -= dtSec; if (state.power.time <= 0){ state.power.type=null; state.power.time=0; showToast("Power-up ended"); } }
+    if (state.power.type){ state.power.time -= dtSec; if (state.power.time<=0){ state.power.type=null; state.power.time=0; showToast("Power-up ended"); } }
     updateHUD();
   }
 
@@ -214,10 +210,7 @@
     else { powerNameEl.textContent="—"; powerTimeEl.textContent=""; }
   }
 
-  function activatePower(type){
-    state.power.type=type; state.power.time=10;
-    showToast(type==="wings"?"Wings! Fly for 10s":"Ghost! Invincible for 10s", 900);
-  }
+  function activatePower(type){ state.power.type=type; state.power.time=10; showToast(type==="wings"?"Wings! 10s":"Ghost! 10s", 800); }
 
   function gameOver(){
     if (state.gameOverLock) return;
@@ -237,117 +230,6 @@
   }
 
   function clearAll(){ ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height); ctx.setTransform(DPR,0,0,DPR,0,0); }
-
-  function drawParallax(){
-    // back
-    ctx.save(); ctx.globalAlpha=0.16; ctx.fillStyle=FIU_BLUE;
-    for(const b of state.bg.back){ ctx.fillRect(b.x,b.y,b.w,b.h); ctx.fillStyle="#12305b"; ctx.fillRect(b.x+Math.floor(b.w*0.35), b.y+10, 8, b.h-20); ctx.fillStyle=FIU_BLUE; }
-    ctx.restore();
-    // palms
-    for(const p of state.bg.palms){ drawPalm(p.x,p.y,p.s); }
-    // front
-    ctx.save(); ctx.globalAlpha=0.24; ctx.fillStyle="#12305b";
-    for(const b of state.bg.front){
-      ctx.fillRect(b.x,b.y,b.w,b.h);
-      ctx.fillStyle="#d6e3ff";
-      for(let wx=6; wx<b.w-6; wx+=14){ for(let wy=6; wy<b.h-6; wy+=16){ ctx.fillRect(b.x+wx,b.y+wy,6,8); } }
-      ctx.fillStyle="#12305b";
-    } ctx.restore();
-  }
-
-  function drawPalm(x, y, s=1){
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    ctx.fillStyle = "#8b5a2b"; for (let i=0;i<7;i++){ const tx=i*1.2; ctx.fillRect(tx, 22+i*10, 10, 10); }
-    ctx.fillStyle = "#2b6b3e"; ctx.beginPath(); ctx.arc(8, 22, 8, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = "#2e8b57";
-    for (let k=0;k<6;k++){ const ang=-Math.PI/2 + k*(Math.PI/5) - 0.6;
-      ctx.beginPath(); ctx.moveTo(8,22);
-      ctx.quadraticCurveTo(8+Math.cos(ang)*50, 22+Math.sin(ang)*18, 8+Math.cos(ang)*70, 22+Math.sin(ang)*28);
-      ctx.quadraticCurveTo(12+Math.cos(ang)*34, 26+Math.sin(ang)*14, 8,22); ctx.fill();
-    }
-    ctx.fillStyle = "#6b4f2a"; ctx.beginPath(); ctx.arc(10, 28, 3, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(6, 28, 3, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-  }
-
-  function drawGround(){
-    const y=state.groundY();
-    ctx.fillStyle="#78c267"; ctx.fillRect(0,y,W(),H()-y);
-    ctx.fillStyle="#9e7042"; ctx.fillRect(0,y,W(),10);
-    ctx.fillStyle="#815836"; for(let i=0;i<W();i+=28) ctx.fillRect(i,y+10,18,6);
-  }
-
-  function drawObstacles(){
-    for(const o of state.obstacles){
-      if(o.type==="grill"){
-        ctx.fillStyle=DARK; roundedRect(o.x,o.y,o.w,o.h,4,DARK);
-        ctx.fillStyle=FIU_GOLD; ctx.fillRect(o.x+6,o.y+6,o.w-12,6);
-        ctx.fillStyle=DARK; ctx.fillRect(o.x+6,o.y+o.h-4,4,10); ctx.fillRect(o.x+o.w-10,o.y+o.h-4,4,10);
-      } else {
-        ctx.fillStyle=FIU_GOLD; roundedRect(o.x,o.y,o.w,o.h,4,FIU_GOLD);
-        ctx.fillStyle="#fff"; ctx.fillRect(o.x+2,o.y+8,o.w-4,6);
-      }
-    }
-  }
-
-  function drawCoins(){
-    for(const c of state.coinsArr){
-      ctx.save(); ctx.translate(c.x,c.y); ctx.rotate((state.t*1.2)%(Math.PI*2));
-      circle(0,0,c.r,"#ffefb0"); ctx.strokeStyle=FIU_GOLD; ctx.lineWidth=3/Math.max(1,window.devicePixelRatio||1); ctx.stroke();
-      ctx.fillStyle=FIU_GOLD; ctx.fillRect(-2,-6,4,12); ctx.restore();
-    }
-  }
-
-  function drawPowerups(){
-    for(const p of state.powerups){
-      ctx.save(); ctx.translate(p.x,p.y);
-      if(p.type==="wings"){
-        ctx.fillStyle="#e6f2ff";
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(16,-10,28,0); ctx.quadraticCurveTo(12,8,0,0); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(0,4); ctx.quadraticCurveTo(14,0,24,6); ctx.quadraticCurveTo(10,10,0,4); ctx.fill();
-        circle(0,0,3,"#d0e8ff");
-      } else {
-        ctx.fillStyle="rgba(255,255,255,0.92)";
-        roundedRect(-10,-14,20,24,10,"rgba(255,255,255,0.92)","#cbd5e1");
-        circle(-4,-4,2,"#111"); circle(4,-4,2,"#111");
-      }
-      ctx.restore();
-    }
-  }
-
-  function drawParticles(){} // simplified
-
-  function drawPig(x,y,scale=1){
-    ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
-    if (state.power.type==="ghost" && state.power.time>0) ctx.globalAlpha = 0.6;
-    roundedRect(-4,4,44,28,10,"#ffc0cb","#cc8a97");
-    if (state.power.type==="wings" && state.power.time>0){
-      ctx.fillStyle="#e6f2ff";
-      ctx.beginPath(); ctx.moveTo(0,10); ctx.quadraticCurveTo(-24,0,-28,-10); ctx.quadraticCurveTo(-8,0,0,10); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(28,10); ctx.quadraticCurveTo(52,0,56,-10); ctx.quadraticCurveTo(36,0,28,10); ctx.fill();
-    }
-    roundedRect(20,-4,24,22,8,"#ffc0cb","#cc8a97");
-    roundedRect(24,-8,8,10,3,"#ffc0cb","#cc8a97");
-    roundedRect(34,4,12,10,4,"#ff99aa","#b36b78");
-    circle(38,9,1.2,"#7a2d3a"); circle(42,9,1.2,"#7a2d3a");
-    circle(30,4,2.2,"#111827");
-    roundedRect(4,30,8,6,2,"#e9a7b3"); roundedRect(20,30,8,6,2,"#e9a7b3");
-    ctx.strokeStyle="#e9a7b3"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-2,14); ctx.quadraticCurveTo(-8,14,-6,10); ctx.quadraticCurveTo(-4,6,-8,6); ctx.stroke();
-    ctx.restore();
-  }
-
-  function render(){
-    clearAll();
-    drawParallax();
-    drawGround();
-    drawObstacles();
-    drawCoins();
-    drawPowerups();
-    drawPig(player.x, player.y, 1);
-    ctx.fillStyle = FIU_BLUE;
-    ctx.font = "800 16px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
-    ctx.fillText(`Score ${state.score}`, 12, 24);
-  }
 
   function aabb(a,b){ const pad=3; const bx=b.x+pad, by=b.y+pad, bw=b.w-pad*2, bh=b.h-pad*2; return a.x < bx + bw && a.x + a.w > bx && a.y < by + bh && a.y + a.h > by; }
   function circleHit(rect,c){ const cx=Math.max(rect.x, Math.min(c.x, rect.x+rect.w)); const cy=Math.max(rect.y, Math.min(c.y, rect.y+rect.h)); const dx=c.x-cx, dy=c.y-cy; return dx*dx+dy*dy <= c.r*c.r; }

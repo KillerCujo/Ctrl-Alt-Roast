@@ -1,4 +1,3 @@
-/* condensed styles for V5 */ 
 :root{--fiu-blue:#081E3F;--fiu-gold:#C5960C;--ink:#0f172a;--card:#fff;--shadow:0 10px 30px rgba(0,0,0,.15)}
 *{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:linear-gradient(180deg,#eaf0ff 0%,#f9fbff 100%);color:var(--ink)}
 .topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px clamp(12px,4vw,24px);background:var(--card);box-shadow:var(--shadow);position:sticky;top:0;z-index:5}
