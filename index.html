@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Ctrl-Alt-Roast — FIU Pig Roast Run (V7)</title>
-  <meta name="description" content="Fast, snappy FIU-themed runner: double-jump, 10s Wings & Ghost power-ups." />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Ctrl-Alt-Roast — FIU Pig Roast Run (V8)</title>
+  <meta name="description" content="Mobile-optimized runner: double-jump, 10s Wings & Ghost power-ups." />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -14,7 +16,9 @@
     </header>
 
     <section class="game-wrap">
-      <canvas id="game" width="360" height="640" aria-label="Ctrl-Alt-Roast Game" role="img"></canvas>
+      <div class="canvas-outer">
+        <canvas id="game" aria-label="Ctrl-Alt-Roast Game" role="img"></canvas>
+      </div>
       <div id="controls" class="controls">
         <button id="jumpBtn" aria-label="Jump">Tap • Jump</button>
         <button id="pauseBtn" aria-label="Pause">Pause</button>
@@ -30,7 +34,7 @@
       <div id="overlay" class="overlay show" aria-modal="true">
         <div class="card">
           <h2>Ctrl-Alt-Roast 🐷</h2>
-          <p>Tap/Space to jump (double-jump). 10 coins = next level. Wings/ Ghost last 10s.</p>
+          <p>Tap/Space to jump (double-jump). 10 coins = next level. Wings/Ghost last 10s.</p>
           <div class="overlay-buttons">
             <button id="playBtn" class="primary">Play</button>
           </div>

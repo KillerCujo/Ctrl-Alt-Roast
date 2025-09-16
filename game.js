@@ -1,10 +1,16 @@
-/* Ctrl-Alt-Roast — V7 hotfix */
+/* Ctrl-Alt-Roast — V8 (mobile responsive + no double‑tap zoom) */
 (() => {
-  // Error surface to UI
-  window.addEventListener("error", e => {
-    const t = document.getElementById("toast");
-    if (t) { t.textContent = "Error: " + e.message; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 3000); }
-  });
+  // Prevent browser zoom gestures (helpful on iOS)
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('gesturechange', e => e.preventDefault());
+  document.addEventListener('gestureend', e => e.preventDefault());
+
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', function (e) {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) { e.preventDefault(); } // stop double-tap zoom
+    lastTouchEnd = now;
+  }, {passive:false});
 
   const FIU_BLUE = "#081E3F";
   const FIU_GOLD = "#C5960C";
@@ -28,18 +34,22 @@
   let DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
 
   function resize() {
-    const w = canvas.clientWidth || canvas.width;
-    const h = Math.floor(w * (16/9));
-    canvas.style.height = h + "px";
-    canvas.width = Math.floor(w * DPR);
-    canvas.height = Math.floor(h * DPR);
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.floor(rect.width);
+    const cssH = Math.floor(rect.height);
+    canvas.width = Math.floor(cssW * DPR);
+    canvas.height = Math.floor(cssH * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   }
-  window.addEventListener("resize", resize, {passive:true});
+  const ro = new ResizeObserver(resize);
+  ro.observe(canvas);
+  window.addEventListener("orientationchange", ()=> setTimeout(resize, 250));
   resize();
 
-  const W = () => canvas.clientWidth || 360;
-  const H = () => Math.floor((canvas.clientWidth || 360) * (16/9));
+  const W = () => Math.floor(canvas.getBoundingClientRect().width);
+  const H = () => Math.floor(canvas.getBoundingClientRect().height);
+  const R = (min, max) => Math.random() * (max - min) + min;
+  const RI = (min, max) => Math.floor(R(min, max+1));
 
   const state = {
     running: false, paused: false, lastMs: performance.now(), dtSec: 0, t: 0,
@@ -53,15 +63,15 @@
   };
   bestEl.textContent = state.best;
 
-  // Snappy but sane
   const player = { x:48, y:0, w:38, h:30, vy:0, onGround:true, jumpPower:-12.0, gravity:0.9, canDouble:false };
-  player.y = state.groundY() - player.h;
+  function _resetPlayer(){ player.x=48; player.vy=0; player.onGround=true; player.canDouble=false; player.y=state.groundY()-player.h; }
+  _resetPlayer();
 
   function showToast(msg, t=1000){ toast.textContent = msg; toast.classList.add("show"); setTimeout(()=>toast.classList.remove("show"), t); }
 
   function reset() {
     state.t=0; state.speed=3.0; state.level=1; state.score=0; state.coins=0; state.power={type:null,time:0};
-    player.x=48; player.vy=0; player.onGround=true; player.canDouble=false; player.y=state.groundY()-player.h;
+    _resetPlayer();
     state.obstacles.length=0; state.coinsArr.length=0; state.powerups.length=0;
     state.bg.back.length=0; state.bg.palms.length=0; state.bg.front.length=0;
     initParallax(); spawnInitial(); render();
@@ -74,19 +84,28 @@
     showToast("Go Ctrl-Alt-Roast! 🐷");
   }
 
-  // Allow starting with space/tap too
+  // Start with Play, or tap/space on overlay
   document.addEventListener("keydown", (e)=>{
     if ((e.code==="Space"||e.code==="ArrowUp") && overlay.classList.contains("show")) {
       e.preventDefault(); start();
     }
   });
-  canvas.addEventListener("pointerdown",(e)=>{
-    if (overlay.classList.contains("show")) { e.preventDefault(); start(); }
-  }, {passive:false});
-
+  canvas.addEventListener("pointerdown",(e)=>{ if (overlay.classList.contains("show")) { e.preventDefault(); start(); } }, {passive:false});
   playBtn.addEventListener("click", start);
+
+  // Input
   jumpBtn.addEventListener("click", ()=>tryJump());
   pauseBtn.addEventListener("click", ()=>pauseToggle());
+  document.addEventListener("keydown", (e)=>{
+    const k=e.code;
+    if (k==="Space"||k==="ArrowUp"){
+      if (overlay.classList.contains("show")) return;
+      if (e.repeat && state.power.type!=="wings") return;
+      if (!state.keysDown.has(k)){ state.keysDown.add(k); e.preventDefault(); tryJump(); }
+    } else if (e.key && e.key.toLowerCase()==="p"){ pauseToggle(); }
+  });
+  document.addEventListener("keyup", (e)=>{ const k=e.code; if (k==="Space"||k==="ArrowUp"){ state.keysDown.delete(k); } });
+  canvas.addEventListener("pointerdown",(e)=>{ if (!state.running || state.paused) return; e.preventDefault(); tryJump(); }, {passive:false});
 
   function pauseToggle(){
     if(!state.running) return;
@@ -96,28 +115,27 @@
     else { showToast("Paused"); }
   }
 
-  // Parallax
+  // Parallax (responsive)
   function initParallax(){
     const w=W();
-    function rand(min,max){ return Math.random()*(max-min)+min; }
     let x= -50;
     while (x < w + 400){
-      const bw = Math.floor(rand(70,110));
-      const bh = Math.floor(rand(90,160));
+      const bw = 70 + (Math.random()*40|0);
+      const bh = 90 + (Math.random()*70|0);
       state.bg.back.push({x, y:H()-bh-150, w:bw, h:bh, speed: 18});
-      x += bw + Math.floor(rand(50,80));
+      x += bw + 60;
     }
     x = -80;
     while (x < w + 400){
-      state.bg.palms.push({x, y: state.groundY()-100 - Math.floor(rand(0,10)), s: 1 + rand(0,0.2), speed: 28});
-      x += Math.floor(rand(140,220));
+      state.bg.palms.push({x, y: state.groundY()-100 - (Math.random()*10|0), s: 1 + Math.random()*0.2, speed: 28});
+      x += 140 + (Math.random()*80|0);
     }
     x = -80;
     while (x < w + 400){
-      const bw = Math.floor(rand(60,100));
-      const bh = Math.floor(rand(70,130));
+      const bw = 60 + (Math.random()*40|0);
+      const bh = 70 + (Math.random()*60|0);
       state.bg.front.push({x, y:H()-bh-110, w:bw, h:bh, speed: 36});
-      x += bw + Math.floor(rand(70,100));
+      x += bw + 80;
     }
   }
   function updateParallax(dtSec){
@@ -158,18 +176,6 @@
   }
   function levelUp(){ state.level++; state.speed=Math.min(state.speed+0.35, 8.0); showToast(`Level ${state.level}!`); }
 
-  // Input
-  document.addEventListener("keydown", (e)=>{
-    const k=e.code;
-    if (k==="Space"||k==="ArrowUp"){
-      if (overlay.classList.contains("show")) return;
-      if (e.repeat && state.power.type!=="wings") return;
-      if (!state.keysDown.has(k)){ state.keysDown.add(k); e.preventDefault(); tryJump(); }
-    } else if (e.key && e.key.toLowerCase()==="p"){ pauseToggle(); }
-  });
-  document.addEventListener("keyup", (e)=>{ const k=e.code; if (k==="Space"||k==="ArrowUp"){ state.keysDown.delete(k); } });
-  canvas.addEventListener("pointerdown",(e)=>{ if (!state.running || state.paused) return; e.preventDefault(); tryJump(); }, {passive:false});
-
   function tryJump(){
     if (!state.running || state.paused) return;
     const wingsActive = state.power.type==="wings" && state.power.time>0;
@@ -208,16 +214,12 @@
     for (const c of state.coinsArr){ c.x-=scroll; }
     for (const p of state.powerups){ p.x-=scroll; }
 
-    // Spawn replenishment
     if (state.obstacles.length < (state.level<2?3:5)) scheduleObstacle(420 + Math.random()*480, state.level<2);
     if (state.coinsArr.length < 12) scheduleCoinBurst(480 + Math.random()*600);
     if (state.powerups.length < 1 && Math.random()<0.012) schedulePowerup(1000 + Math.random()*700);
 
     const ghostActive = state.power.type==="ghost" && state.power.time>0;
-
-    if (!ghostActive){
-      for (const o of state.obstacles){ if (aabb(player, o)) return gameOver(); }
-    }
+    if (!ghostActive){ for (const o of state.obstacles){ if (aabb(player, o)) return gameOver(); } }
     for (const c of state.coinsArr){ if(!c.taken && circleHit(player,c)){ c.taken=true; state.coins++; state.score+=3; if (state.coins%10===0) levelUp(); } }
     for (const p of state.powerups){ if(!p.taken && circleHit(player,p)){ p.taken=true; activatePower(p.type); } }
 
@@ -251,18 +253,16 @@
       overlay.classList.add("show");
       const card = overlay.querySelector(".card");
       card.querySelector("h2").textContent = "Game Over!";
-      card.querySelector("p")?.remove();
       const p = document.createElement("p");
       p.innerHTML = `Score: <b>${state.score}</b> • Coins: <b>${state.coins}</b> • Best: <b>${state.best}</b>`;
-      card.insertBefore(p, card.querySelector(".overlay-buttons"));
+      card.appendChild(p);
       document.getElementById("playBtn").textContent = "Play Again";
       state.gameOverLock = false;
     }, 220);
   }
 
-  function clearAll(){ ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height); ctx.setTransform(DPR,0,0,DPR,0,0); }
+  function clearAll(){ const DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1)); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height); ctx.setTransform(DPR,0,0,DPR,0,0); }
 
-  // Drawing
   function drawParallax(){
     // back
     ctx.save(); ctx.globalAlpha=0.16; ctx.fillStyle=FIU_BLUE;
@@ -368,8 +368,8 @@
     drawPowerups();
     drawPig(player.x, player.y, 1);
     ctx.fillStyle = FIU_BLUE;
-    ctx.font = "800 16px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
-    ctx.fillText(`Score ${state.score}`, 12, 24);
+    ctx.font = "800 14px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
+    ctx.fillText(`Score ${state.score}`, 12, 20);
   }
 
   // Helpers
@@ -377,9 +377,8 @@
   function circleHit(rect,c){ const cx=Math.max(rect.x, Math.min(c.x, rect.x+rect.w)); const cy=Math.max(rect.y, Math.min(c.y, rect.y+rect.h)); const dx=c.x-cx, dy=c.y-cy; return dx*dx+dy*dy <= c.r*c.r; }
   function roundedRect(x,y,w,h,r,fill,stroke){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); if(fill){ctx.fillStyle=fill; ctx.fill();} if(stroke){ctx.strokeStyle=stroke; ctx.stroke();} }
   function circle(x,y,r,fill){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); if(fill){ ctx.fillStyle=fill; ctx.fill(); } }
+  function clearAll(){ const DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1)); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height); ctx.setTransform(DPR,0,0,DPR,0,0); }
 
-  function clearAll(){ ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height); ctx.setTransform(DPR,0,0,DPR,0,0); }
-
-  // Init preview frame
+  // Startable
   reset();
 })();
