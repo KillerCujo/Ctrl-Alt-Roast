@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
   <title>Ctrl-Alt-Roast — FIU Pig Roast Run</title>
-  <meta name="description" content="Run, jump, and collect FIU gold as our pig dashes through campus in this mobile-friendly runner!" />
+  <meta name="description" content="Dash, jump, and power-up as our pig in a Mario-style runner. Palm trees, FIU skyline, coins & power-ups!" />
   <link rel="preload" href="game.js" as="script">
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -24,17 +24,19 @@
         <div class="score">Score: <span id="score">0</span></div>
         <div class="hi">Best: <span id="best">0</span></div>
         <div class="speed">Lvl: <span id="level">1</span></div>
+        <div class="coins">Coins: <span id="coins">0</span></div>
+        <div class="power" id="powerup">Power: <span id="powerName">—</span> <span id="powerTime"></span></div>
       </div>
 
-      <div id="overlay" class="overlay show">
+      <div id="overlay" class="overlay show" aria-modal="true">
         <div class="card">
           <h2>Ctrl-Alt-Roast 🐷</h2>
-          <p>Help our pig dash through campus, leap over grills, and collect FIU gold!</p>
+          <p>Collect <b>coins</b>, dodge <b>grills & cones</b>, and snag <b>power‑ups</b>:</p>
           <ul>
-            <li>Tap anywhere (or press <kbd>Space</kbd>) to jump</li>
-            <li>Survive and collect coins to level up</li>
-            <li>Avoid grills and cones</li>
+            <li><b>Wings</b> — fly for 10s</li>
+            <li><b>Ghost</b> — pass through obstacles for 10s</li>
           </ul>
+          <p>Every <b>10 coins</b> = next level → a little faster.</p>
           <div class="overlay-buttons">
             <button id="playBtn" class="primary">Play</button>
             <button id="howBtn">How to play</button>
@@ -46,7 +48,7 @@
     </section>
 
     <footer class="footer">
-      <small>Team Ctrl-Alt-Roast — mobile-friendly runner. Not affiliated with Nintendo.</small>
+      <small>Team Ctrl-Alt-Roast • Not affiliated with Nintendo.</small>
     </footer>
   </main>
 
