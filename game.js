@@ -1,6 +1,7 @@
-/* Ctrl-Alt-Roast — simple canvas runner (mobile-friendly)
-   Keys: Space/Up to jump; tap/touch to jump. Pause with P or button.
-   Uses no external assets—shapes only.  (c) 2025
+/* Ctrl-Alt-Roast — canvas runner (mobile-friendly)
+   Fixes:
+   - Prevent hold-to-fly: jump triggers only on keydown edge or tap; no mid-air boosts
+   - Start slower; speed up each level
 */
 
 (() => {
@@ -34,11 +35,11 @@
   window.addEventListener("resize", resize, {passive:true});
   resize();
 
-  // Game world metrics (virtual units based on CSS pixel size)
+  // Game world metrics
   const W = () => canvas.clientWidth;
   const H = () => Math.floor(canvas.clientWidth * (16/9));
 
-  // Util random
+  // Utils
   const R = (min, max) => Math.random() * (max - min) + min;
   const RI = (min, max) => Math.floor(R(min, max+1));
 
@@ -49,7 +50,7 @@
     t: 0,
     dt: 0,
     last: performance.now(),
-    speed: 4.2,
+    speed: 2.6,                // slower start
     level: 1,
     score: 0,
     best: Number(localStorage.getItem("car_best") || 0),
@@ -60,42 +61,33 @@
   };
   bestEl.textContent = state.best;
 
-  // Player (the pig)
+  // Player
   const player = {
     x: 48, y: 0, w: 42, h: 34,
     vy: 0,
     onGround: true,
-    jumpPower: -10.8,
-    gravity: 0.55,
-    jumpQueued: false
+    jumpPower: -11.2,
+    gravity: 0.58,
   };
   player.y = state.groundY() - player.h;
 
+  // Input edge detection
+  const keysDown = new Set();
+
   function drawPig(x, y, scale=1) {
-    // Cute pig built from shapes
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
-
-    // body
-    roundedRect(-4, 4, 44, 28, 10, "#ffc0cb", "#cc8a97");
-    // head
-    roundedRect(20, -4, 24, 22, 8, "#ffc0cb", "#cc8a97");
-    // ear
-    roundedRect(24, -8, 8, 10, 3, "#ffc0cb", "#cc8a97");
-    // snout
-    roundedRect(34, 4, 12, 10, 4, "#ff99aa", "#b36b78");
-    circle(38, 9, 1.2, "#7a2d3a");
-    circle(42, 9, 1.2, "#7a2d3a");
-    // eye
-    circle(30, 4, 2.2, "#111827");
-    // leggies
-    roundedRect(4, 30, 8, 6, 2, "#e9a7b3");
+    roundedRect(-4, 4, 44, 28, 10, "#ffc0cb", "#cc8a97");     // body
+    roundedRect(20, -4, 24, 22, 8, "#ffc0cb", "#cc8a97");     // head
+    roundedRect(24, -8, 8, 10, 3, "#ffc0cb", "#cc8a97");      // ear
+    roundedRect(34, 4, 12, 10, 4, "#ff99aa", "#b36b78");      // snout
+    circle(38, 9, 1.2, "#7a2d3a"); circle(42, 9, 1.2, "#7a2d3a"); // nostrils
+    circle(30, 4, 2.2, "#111827");                            // eye
+    roundedRect(4, 30, 8, 6, 2, "#e9a7b3");                   // legs
     roundedRect(20, 30, 8, 6, 2, "#e9a7b3");
-    // tail
-    ctx.strokeStyle = "#e9a7b3"; ctx.lineWidth = 2;
+    ctx.strokeStyle = "#e9a7b3"; ctx.lineWidth = 2;           // tail
     ctx.beginPath(); ctx.moveTo(-2, 14); ctx.quadraticCurveTo(-8, 14, -6, 10); ctx.quadraticCurveTo(-4, 6, -8, 6); ctx.stroke();
-
     ctx.restore();
   }
 
@@ -123,7 +115,7 @@
 
   function reset() {
     state.t = 0;
-    state.speed = 4.2;
+    state.speed = 2.6;
     state.level = 1;
     state.score = 0;
     player.x = 48;
@@ -134,7 +126,7 @@
     state.coins.length = 0;
     state.particles.length = 0;
     spawnInitial();
-    render(0); // draw initial frame
+    render(0);
   }
 
   function start() {
@@ -162,7 +154,6 @@
 
   // Entities
   function spawnInitial() {
-    // few floor decorations / no obstacles in first second
     for (let i=0;i<3;i++){
       scheduleObstacle(RI(600, 1200) + i*260);
       scheduleCoinBurst(RI(500, 900) + i*220);
@@ -197,7 +188,7 @@
 
   function levelUp(){
     state.level++;
-    state.speed += 0.4;
+    state.speed = Math.min(state.speed + 0.55, 9.0); // ramp
     showToast(`Level ${state.level}!`);
   }
 
@@ -207,11 +198,6 @@
     if (player.onGround){
       player.vy = player.jumpPower;
       player.onGround = false;
-    } else {
-      // small air tweak
-      if (player.vy > -3){
-        player.vy += -1.2;
-      }
     }
   }
   canvas.addEventListener("pointerdown", (e)=> {
@@ -220,9 +206,25 @@
   });
   jumpBtn.addEventListener("click", jump);
   pauseBtn.addEventListener("click", pauseToggle);
+
   document.addEventListener("keydown", (e)=>{
-    if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); jump(); }
-    if (e.key.toLowerCase() === "p") pauseToggle();
+    const k = e.code;
+    if (k === "Space" || k === "ArrowUp"){
+      if (e.repeat) return; // ignore auto-repeat
+      if (!keysDown.has(k)){
+        keysDown.add(k);
+        e.preventDefault();
+        jump();
+      }
+    } else if (e.key.toLowerCase() === "p"){
+      pauseToggle();
+    }
+  });
+  document.addEventListener("keyup", (e)=>{
+    const k = e.code;
+    if (k === "Space" || k === "ArrowUp"){
+      keysDown.delete(k);
+    }
   });
 
   playBtn.addEventListener("click", ()=> start());
@@ -233,7 +235,7 @@
   // Game Loop
   function loop(now){
     if (!state.running || state.paused) return;
-    state.dt = (now - state.last) / 16.6667; // normalize to ~60fps steps
+    state.dt = (now - state.last) / 16.6667;
     state.last = now;
     update(state.dt);
     render(state.dt);
@@ -243,9 +245,15 @@
   function update(dt){
     state.t += dt;
 
-    // Gravity and motion
+    // Motion
     player.vy += player.gravity * dt;
     player.y += player.vy * dt;
+
+    // Ceiling clamp
+    if (player.y < 0){
+      player.y = 0;
+      player.vy = Math.max(player.vy, 0);
+    }
 
     // Ground collision
     const gy = state.groundY() - player.h;
@@ -255,34 +263,23 @@
       player.onGround = true;
     }
 
-    // Scroll obstacles and coins
+    // Scroll entities
     state.obstacles.forEach(o=>{
       o.x -= state.speed * 3.2 * dt;
       if (!o.passed && o.x + o.w < player.x){
         o.passed = true;
         state.score += 5;
-        if (state.score % 30 === 0) levelUp();
+        if (state.score > 0 && state.score % 30 === 0) levelUp();
       }
     });
-    state.coins.forEach(c=>{
-      c.x -= state.speed * 3.2 * dt;
-    });
+    state.coins.forEach(c=> c.x -= state.speed * 3.2 * dt );
 
-    // Spawn new entities
-    if (state.obstacles.length < 4){
-      scheduleObstacle(RI(320, 720));
-    }
-    if (state.coins.length < 10){
-      scheduleCoinBurst(RI(380, 980));
-    }
+    // Spawn
+    if (state.obstacles.length < 4) scheduleObstacle(RI(320, 720));
+    if (state.coins.length < 10)    scheduleCoinBurst(RI(380, 980));
 
     // Collisions
-    for (const o of state.obstacles){
-      if (aabb(player, o)){
-        gameOver();
-        return;
-      }
-    }
+    for (const o of state.obstacles){ if (aabb(player, o)) return gameOver(); }
     for (const c of state.coins){
       if (!c.taken && circleHit(player, c)){
         c.taken = true;
@@ -291,12 +288,12 @@
       }
     }
 
-    // Clean up off-screen
+    // Cleanup
     state.obstacles = state.obstacles.filter(o => o.x + o.w > -60);
     state.coins = state.coins.filter(c => !c.taken && c.x + c.r > -40);
     state.particles = state.particles.filter(p => (p.life -= dt) > 0);
 
-    // Update HUD
+    // HUD
     scoreEl.textContent = state.score.toString();
     bestEl.textContent = state.best.toString();
     levelEl.textContent = state.level.toString();
@@ -317,10 +314,10 @@
     for(let i=0;i<12;i++){
       state.particles.push({
         x, y,
-        vx: R(-1.3, 1.3),
-        vy: R(-2.0, -0.2),
+        vx: (Math.random()*2-1.0)*1.3,
+        vy: -Math.random()*2.0,
         g: 0.08,
-        life: R(10, 18),
+        life: 10 + Math.random()*8,
         color
       });
     }
@@ -350,17 +347,13 @@
     const y = state.groundY();
     ctx.fillStyle = "#6dbb5a";
     ctx.fillRect(0, y, W(), H()-y);
-    // track
     ctx.fillStyle = "#9e7042";
     ctx.fillRect(0, y, W(), 10);
     ctx.fillStyle = "#815836";
-    for (let i=0;i<W();i+=28){
-      ctx.fillRect(i, y+10, 18, 6);
-    }
+    for (let i=0;i<W();i+=28) ctx.fillRect(i, y+10, 18, 6);
   }
 
   function drawBackground(t){
-    // faint FIU skyline blocks
     ctx.save();
     ctx.globalAlpha = 0.15;
     ctx.fillStyle = FIU_BLUE;
@@ -373,7 +366,6 @@
     }
     ctx.restore();
 
-    // floating clouds
     ctx.save();
     ctx.globalAlpha = 0.9;
     for (let i=0;i<4;i++){
@@ -395,20 +387,16 @@
   function drawObstacles(){
     for (const o of state.obstacles){
       if (o.type === "grill"){
-        // tailgate grill
         ctx.fillStyle = DARK;
         roundedRect(o.x, o.y, o.w, o.h, 4, DARK);
         ctx.fillStyle = FIU_GOLD;
         ctx.fillRect(o.x+6, o.y+6, o.w-12, 6);
-        // legs
         ctx.fillStyle = DARK;
         ctx.fillRect(o.x+6, o.y+o.h-4, 4, 10);
         ctx.fillRect(o.x+o.w-10, o.y+o.h-4, 4, 10);
-        // smoke
         ctx.strokeStyle = "rgba(0,0,0,.2)";
         ctx.beginPath(); ctx.moveTo(o.x+10, o.y-6); ctx.bezierCurveTo(o.x+6, o.y-14, o.x+14, o.y-16, o.x+12, o.y-24); ctx.stroke();
       } else {
-        // safety cone
         ctx.fillStyle = FIU_GOLD;
         roundedRect(o.x, o.y, o.w, o.h, 4, FIU_GOLD);
         ctx.fillStyle = "#fff";
@@ -457,19 +445,6 @@
     ctx.fillText(`Score ${state.score}`, 12, 24);
   }
 
-  // Helpers
-  function aabb(a, b){
-    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-  }
-  function circleHit(rect, c){
-    const cx = Math.max(rect.x, Math.min(c.x, rect.x + rect.w));
-    const cy = Math.max(rect.y, Math.min(c.y, rect.y + rect.h));
-    const dx = c.x - cx;
-    const dy = c.y - cy;
-    return (dx*dx + dy*dy) <= (c.r*c.r);
-  }
-
-  // Kickoff in idle mode (show overlay)
-  reset();
+  reset(); // idle
 
 })();
