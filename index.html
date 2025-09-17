@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Ctrl-Alt-Roast — FIU Pig Roast Run (V9.1)</title>
+  <title>Ctrl-Alt-Roast — FIU Pig Roast Run (V9.2)</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,35 +13,49 @@
     <header class="topbar">
       <h1><span class="fiu">FIU</span> Pig Roast — <span class="title">Ctrl-Alt-Roast</span></h1>
     </header>
+
     <section class="game-wrap">
       <div class="canvas-outer">
         <canvas id="game" aria-label="Ctrl-Alt-Roast Game" role="img"></canvas>
         <div id="rotateOverlay" class="rotate-overlay hidden" aria-hidden="true">
-          <div class="rotate-card"><div class="icon">📱↻</div><div class="msg">Please rotate to <b>portrait</b> to play.</div></div>
+          <div class="rotate-card">
+            <div class="icon">📱↻</div>
+            <div class="msg">Rotate to <b>portrait</b> to play.</div>
+          </div>
         </div>
       </div>
+
       <div id="controls" class="controls">
         <button id="jumpBtn" aria-label="Jump">Tap • Jump</button>
         <button id="pauseBtn" aria-label="Pause">Pause</button>
       </div>
+
       <div id="hud" class="hud">
-        <div class="score">Score: <span id="score">0</span></div>
-        <div class="hi">Best: <span id="best">0</span></div>
-        <div class="speed">Lvl: <span id="level">1</span></div>
-        <div class="coins">Coins: <span id="coins">0</span></div>
-        <div class="power" id="powerup">Power: <span id="powerName">—</span> <span id="powerTime"></span></div>
+        <div>Score: <span id="score">0</span></div>
+        <div>Best: <span id="best">0</span></div>
+        <div>Lvl: <span id="level">1</span></div>
+        <div>Coins: <span id="coins">0</span></div>
+        <div>Power: <span id="powerName">—</span> <span id="powerTime"></span></div>
       </div>
+
       <div id="overlay" class="overlay show" aria-modal="true">
         <div class="card">
           <h2>Ctrl-Alt-Roast 🐷</h2>
-          <p>Tap/Space to jump. Every 10 coins = next level. Power‑ups last 10s.</p>
-          <div class="overlay-buttons"><button id="playBtn" class="primary">Play</button></div>
+          <p>Tap/Space to jump (double-jump). 10 coins = next level. Power-ups last 10s.</p>
+          <div class="overlay-buttons">
+            <button id="playBtn" class="primary">Play</button>
+          </div>
         </div>
       </div>
+
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </section>
-    <footer class="footer"><small>Team Ctrl-Alt-Roast • Not affiliated with Nintendo.</small></footer>
+
+    <footer class="footer">
+      <small>Team Ctrl-Alt-Roast • Not affiliated with Nintendo.</small>
+    </footer>
   </main>
+
   <script src="game.js"></script>
 </body>
 </html>

@@ -10,9 +10,6 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 canvas#game{width:100%;aspect-ratio:16/9;background:linear-gradient(180deg,#8ec5ff 0%,#c8e6ff 50%,#b7e0ff 60%,#8fd3fe 100%);border-radius:16px;box-shadow:var(--shadow);touch-action:none;display:block}
 .rotate-overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(8,30,63,.85);color:#fff;border-radius:16px}
 .rotate-overlay.hidden{display:none}
-.rotate-card{display:grid;gap:10px;place-items:center;text-align:center;padding:20px 16px}
-.rotate-card .icon{font-size:36px}
-.rotate-card .msg{font-weight:800}
 .controls{display:flex;gap:12px;margin-top:12px;justify-content:space-between;flex-wrap:wrap}
 .controls button{flex:1 1 160px;font-size:clamp(16px,5vw,20px);padding:14px 16px;border:none;border-radius:12px;font-weight:800;background:var(--fiu-gold);color:#fff;box-shadow:0 8px 18px rgba(197,150,12,.35);cursor:pointer}
 .controls button#pauseBtn{background:#111827;box-shadow:0 8px 18px rgba(17,24,39,.25)}
